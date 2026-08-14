@@ -1,0 +1,71 @@
+{
+  "name": "@ycp424c/dsh-auto-fold-turn",
+  "description": "DSH Web client plugin: auto-folds completed-turn process nodes behind a summary row; expand state persists per session+turn",
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "dsh.plugin.json",
+    "cordis.patch.yml",
+    "README.md",
+    "INSTALL.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "setup:dsh": "node scripts/link-dsh-source.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/build-client.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.client.json",
+    "test": "vitest run",
+    "check": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "peerDependencies": {
+    "cordis": "^4.0.0-rc.7",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-client-runtime": "link:.dsh/source/current/packages/client/runtime",
+    "@deepseek-ai/dsh-client-ui-conversation": "link:.dsh/source/current/packages/client/ui-conversation",
+    "@deepseek-ai/dsh-client-ui-slots": "link:.dsh/source/current/packages/client/ui-slots",
+    "@deepseek-ai/dsh-client-web-react": "link:.dsh/source/current/packages/client/web-react",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "~18.3.1",
+    "cordis": "link:.dsh/source/current/vendor/cordis",
+    "jsdom": "^26.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "use-sync-external-store": "^1.6.0",
+    "vitest": "^4.1.10"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,48 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "verbatimModuleSyntax": false,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "declaration": false,
+    "sourceMap": false,
+    "rootDir": "..",
+    "jsx": "react-jsx",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    "noImplicitOverride": false,
+    "paths": {
+      "cordis": ["./.dsh/source/reference/vendor/cordis/lib/types/index.d.ts"],
+      "@deepseek-ai/cordis": ["./.dsh/source/reference/vendor/cordis/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-client-runtime/client": ["./.dsh/source/reference/packages/client/runtime/src/client/index.ts"],
+      "@deepseek-ai/dsh-client-connection/client": ["./.dsh/source/reference/packages/client/connection/src/client/index.ts"],
+      "@deepseek-ai/dsh-host-apiproxy/api": ["./.dsh/source/reference/packages/host/apiproxy/src/api/index.ts"],
+      "@deepseek-ai/dsh-session/surface": ["./.dsh/source/reference/packages/core/session/src/surface.ts"],
+      "@deepseek-ai/dsh-session/types": ["./.dsh/source/reference/packages/core/session/src/types.ts"],
+      "@deepseek-ai/dsh-session-projection/types": ["./.dsh/source/reference/packages/session/session-projection/src/types.ts"],
+      "@deepseek-ai/dsh-llm-retry/types": ["./.dsh/source/reference/packages/llm/llm-retry/src/types.ts"],
+      "@deepseek-ai/dsh-client-ui-slots": ["./.dsh/source/reference/packages/client/ui-slots/src/index.ts"],
+      "@deepseek-ai/dsh-client-web-react": ["./.dsh/source/reference/packages/client/web-react/src/index.ts"],
+      "@deepseek-ai/dsh-client-ui-conversation/client": ["./.dsh/source/reference/packages/client/ui-conversation/lib/types/client/contract/chat-nodes.d.ts"],
+      "@deepseek-ai/dsh-client-ui-conversation/src/*": ["./.dsh/source/reference/packages/client/ui-conversation/lib/types/*"]
+    }
+  },
+  "include": [
+    "src/client/**/*.ts",
+    "src/client/**/*.tsx",
+    "tests/fold-summary-definition.spec.ts",
+    "tests/fold-target-resolver.spec.ts",
+    "tests/fold-state-store.spec.ts",
+    "tests/dom-adapter.spec.ts",
+    "tests/summary-row.spec.tsx",
+    "tests/client-composition.spec.tsx",
+    "tests/auto-fold-flow.spec.tsx",
+    "tests/built-bundle-smoke.spec.ts",
+    "tests/vendor-shims.d.ts",
+    "./.dsh/source/reference/packages/client/ui-conversation/lib/types/client/contract/slots.d.ts"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@ycp424c/dsh-auto-fold-turn",
+  "version": "0.1.0",
+  "description": "Auto-fold completed-turn process nodes behind a summary row in DSH Web",
+  "host": "lib/index.js",
+  "client": "lib/client.js",
+  "bundle": "cordis.patch.yml",
+  "config": {}
+}

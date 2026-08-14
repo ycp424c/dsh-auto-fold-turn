@@ -1,0 +1,6 @@
+# dsh-auto-fold-turn profile bundle patch: one row mounting the external
+# plugin into the web profile. The host is a no-op (package loading +
+# client bundle exposure); every folding behavior lives in the browser half.
+- insert:
+    - id: dsh-auto-fold-turn
+      name: '@ycp424c/dsh-auto-fold-turn'
