@@ -18,8 +18,8 @@ function completedTurn(): FoldFixtureNode[] {
     { key: 'tool-1', kind: 'tool-call', anchorSeq: 4, turn: 1 },
     { key: 'assistant-mid', kind: 'assistant-step', anchorSeq: 5, turn: 1, finalNodeSeq: 5 },
     { key: 'tool-2', kind: 'tool-call', anchorSeq: 6, turn: 1 },
-    { key: 'assistant-final', kind: 'assistant-step', anchorSeq: 8, turn: 1, finalNodeSeq: 8 },
     { key: SUMMARY_KEY, kind: 'auto-fold-summary', anchorSeq: 7.95, turn: 1, summaryData: { closingSeq: 8 } },
+    { key: 'assistant-final', kind: 'assistant-step', anchorSeq: 8, turn: 1, finalNodeSeq: 8 },
     { key: 'turn-tail-1', kind: 'turn-tail', anchorSeq: 8.1, turn: 1 },
   ]
 }
@@ -138,8 +138,8 @@ describe('FoldSummaryRow', () => {
   it('renders nothing when there is no process to fold (empty flow row)', () => {
     const chat = foldChatFixture([
       { key: 'user-1', kind: 'user', anchorSeq: 2, turn: 1 },
-      { key: 'assistant-final', kind: 'assistant-step', anchorSeq: 8, turn: 1, finalNodeSeq: 8 },
       { key: SUMMARY_KEY, kind: 'auto-fold-summary', anchorSeq: 7.95, turn: 1, summaryData: { closingSeq: 8 } },
+      { key: 'assistant-final', kind: 'assistant-step', anchorSeq: 8, turn: 1, finalNodeSeq: 8 },
     ])
     const store = new FoldStateStore(null)
     const container = document.createElement('div')

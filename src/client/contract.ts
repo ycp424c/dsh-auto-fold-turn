@@ -3,8 +3,9 @@ import type { ChatConversationViewNode } from '@deepseek-ai/dsh-client-runtime/c
 /**
  * Renderer payload of the auto-fold summary node: the turn number and the
  * closing assistant's durable finalNode seq. `closingSeq` is the resolver's
- * authoritative final-reply identity and the anchor basis (summary anchors
- * strictly before it).
+ * authoritative final-reply identity; the node's anchor sits at the top of
+ * the agent answer — after the user prompt, before every process row (the
+ * folding boundary is the final reply itself, not the summary).
  */
 export interface FoldSummaryChatData {
   readonly turn: number
@@ -13,7 +14,7 @@ export interface FoldSummaryChatData {
 
 declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
   interface ChatNodeDataMap {
-    /** Completed-turn process fold summary, anchored before the closing assistant. */
+    /** Completed-turn process fold summary, anchored at the top of the agent answer. */
     'auto-fold-summary': FoldSummaryChatData
   }
 }

@@ -2,8 +2,8 @@
 
 DSH Web 外部 client 插件：一轮对话产生最终回复后，自动把该轮位于最终回复之前的
 工具调用、中间 assistant、重试等过程节点折叠为一行摘要（`▶ 过程 · N 项`），摘要行
-位于被折叠内容之后、最终回复之前。用户可随时展开/收起，显式展开状态按
-`sessionId + turn` 持久化到 localStorage，跨刷新保留直到再次折叠。
+位于该轮 agent 回答的顶部（用户 prompt 之后、过程节点之前）。用户可随时展开/收起，
+显式展开状态按 `sessionId + turn` 持久化到 localStorage，跨刷新保留直到再次折叠。
 
 该插件**不修改、不 patch DSH 源码**：所有行为通过 DSH 正式的 Conversation Node
 扩展接口与一个薄 DOM 适配层实现；禁用或卸载插件后，原生聊天内容完整恢复。
@@ -31,15 +31,18 @@ DSH Web 外部 client 插件：一轮对话产生最终回复后，自动把该�
 | 模块 | 职责 |
 | --- | --- |
 | `src/client/index.tsx` | 插件入口：注册 Definition、keyed renderer、样式表；生命周期随 fiber |
-| `src/client/fold-summary-definition.ts` | `auto-fold-summary` Conversation Node Definition（match `turn/end`，读 `turn-tail` data 的 closing，anchor 为 closing seq - 0.05） |
+| `src/client/fold-summary-definition.ts` | `auto-fold-summary` Conversation Node Definition（match `turn/end` 与轮内 agent 内容事件，读 `turn-tail` data 的 closing，anchor 为该轮第一个 agent 内容事件 seq - 0.05） |
 | `src/client/fold-target-resolver.ts` | 纯函数：从 Chat snapshot 计算本轮可折叠过程 key 与最终回复 key |
 | `src/client/fold-state-store.ts` | `sessionId+turn` 显式展开集合，localStorage key `dsh.auto-fold.expanded.v1` |
 | `src/client/dom-adapter.ts` | 唯一接触 DSH DOM 的模块：按 `[data-chat-anchor-key]` 精确 key 定位、原子显隐、`[data-conversation-scroll]` 滚动补偿 |
 | `src/client/summary-row.tsx` | 摘要行 renderer：layout effect 应用显隐，原生 button + `aria-expanded` |
 
-排序：摘要 Node 的 `anchorSeq` 为 closing seq 减插件私有小数 offset（兼容边界，
-非公共 API）。任何原生排在 summary 之后的 Node（终态提示、晚期工具证据）都不会被
-折叠，因此终态提示即使位于最终回复之后也不破坏“摘要位于被折叠内容下方”的语义。
+排序：摘要 Node 的 `anchorSeq` 为该轮第一个 agent 内容事件（`assistant/chunk` /
+`assistant/message` / `tool/call` / `llm/retry`）的 seq 减插件私有小数 offset（兼容边界，
+非公共 API），使按钮位于 agent 回答的顶部——用户 prompt 之后、所有过程节点之前。
+这些事件都带 `turn` 字段且恒排在用户消息之后（真实事件流中 `step/start` 可能先于
+`user/message`，即 agent/inbox/spliced，因此 step 锚点不可靠）。折叠边界以最终回复
+自身的 anchor 为准：任何原生排在最终回复之后的 Node（终态提示、晚期工具证据）都不会被折叠。
 
 ## DOM 兼容标记
 
@@ -52,11 +55,11 @@ DSH Web 外部 client 插件：一轮对话产生最终回复后，自动把该�
 
 ## 折叠语义与参考源
 
-- 折叠对象：该轮内、排序严格位于摘要行之前、且不在保护集合
+- 折叠对象：该轮内、排序严格位于最终回复之前、且不在保护集合
   （`user` / `steering` / `turn-tail` / 最终回复）中的一切 Chat 节点——包括
   `tool-call`、中间 `assistant-step`、`model-retry`，以及 `context`、
   `command`、`compaction` 等轮内节点（均可展开恢复）。
-- 摘要行之后的一切节点（终态 error / max-token 提示、晚期工具证据）永不折叠。
+- 最终回复之后的一切节点（终态 error / max-token 提示、晚期工具证据）永不折叠。
 - DOM 标记语义：`[data-chat-anchor-key]` 缺失或流程 kind 漂移时**不隐藏任何行**
   （fail-open）；`[data-conversation-scroll]` 缺失时仍执行隐藏，仅跳过滚动
   补偿（行可随时展开恢复，不会丢失内容）。

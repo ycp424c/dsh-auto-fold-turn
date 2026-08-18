@@ -148,17 +148,23 @@ describe('auto-fold-summary Definition', () => {
     expect((summary?.data as { closingSeq: number }).closingSeq).toBeCloseTo(5 - 0.9, 5)
   })
 
-  it('anchors strictly before the closing assistant and after the process rows', () => {
+  it('anchors at the top of the agent answer, after the user prompt and before the first process row', () => {
     const value = assemble(completedTurn(1))
     const summary = node(value, AUTO_FOLD_SUMMARY_KIND)!
     const closing = node(value, 'assistant-step')!
     const tool = node(value, 'tool-call')!
+    const user = node(value, 'user')!
+    // Anchor basis is the turn's first agent-content event (tool/call seq 4).
+    // That event always carries a `turn` field and always sorts after the
+    // user message in real streams, where step/start can precede
+    // user/message (agent/inbox/spliced).
+    expect(summary.anchorSeq).toBeCloseTo(4 - 0.05, 5)
+    expect(summary.anchorSeq).toBeGreaterThan(user.anchorSeq)
+    expect(summary.anchorSeq).toBeLessThan(tool.anchorSeq)
     expect(summary.anchorSeq).toBeLessThan(closing.anchorSeq)
-    expect(summary.anchorSeq).toBeGreaterThan(tool.anchorSeq)
-    expect(summary.anchorSeq).toBeCloseTo(6 - 0.05, 5)
   })
 
-  it('keeps the max-tokens notice after the summary anchor (visible, not folded)', () => {
+  it('keeps the max-tokens notice after the final reply (visible, not folded)', () => {
     const value = assemble([
       at(1, 'turn/start', { turn: 4 }),
       at(2, 'user/message', textMessage('u4', 'ask'), { surfaceOp: 'append' }),
@@ -174,7 +180,9 @@ describe('auto-fold-summary Definition', () => {
     const summary = node(value, AUTO_FOLD_SUMMARY_KIND)!
     const notice = node(value, 'turn-max-tokens')!
     const tail = node(value, 'turn-tail')!
+    // The summary anchors before the first agent-content event (assistant/message seq 4)…
     expect(summary.anchorSeq).toBeCloseTo(4 - 0.05, 5)
+    // …while result states sort after the final reply, so nothing folds them.
     expect(notice.anchorSeq).toBeGreaterThan(summary.anchorSeq)
     expect(tail.anchorSeq).toBeGreaterThan(summary.anchorSeq)
   })

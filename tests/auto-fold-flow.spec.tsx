@@ -179,7 +179,8 @@ describe('auto-fold browser-equivalent flow', () => {
     expect(screen.getByRole('button', { name: '▶ 过程 · 3 项' })).toBeDefined()
     // 3 process rows hidden: tool-call, intermediate assistant, tool-call.
     expect(hiddenKinds(container)).toEqual(['tool-call', 'assistant-step', 'tool-call'])
-    // Visible: user, summary, final assistant, turn-tail.
+    // Visible, in DOM order: user message, then summary at the top of the
+    // agent answer (just before the final reply), final assistant, turn-tail.
     expect(visibleKinds(container)).toEqual(['user', 'auto-fold-summary', 'assistant-step', 'turn-tail'])
   })
 
@@ -191,8 +192,10 @@ describe('auto-fold browser-equivalent flow', () => {
     render(<Flow chat={chat} store={store} container={container} />, { container })
     fireEvent.click(screen.getByRole('button', { name: '▶ 过程 · 3 项' }))
     expect(hiddenKinds(container)).toHaveLength(0)
+    // Expanded: the summary stays at the top of the agent answer, after the
+    // user message and before the process rows.
     expect(visibleKinds(container)).toEqual([
-      'user', 'tool-call', 'assistant-step', 'tool-call', 'auto-fold-summary', 'assistant-step', 'turn-tail',
+      'user', 'auto-fold-summary', 'tool-call', 'assistant-step', 'tool-call', 'assistant-step', 'turn-tail',
     ])
     fireEvent.click(screen.getByRole('button', { name: '▼ 收起过程 · 3 项' }))
     expect(hiddenKinds(container)).toEqual(['tool-call', 'assistant-step', 'tool-call'])
@@ -252,7 +255,7 @@ describe('auto-fold browser-equivalent flow', () => {
     render(<Flow chat={chat} store={store} container={container} />, { container })
     expect(screen.getByRole('button', { name: '▶ 过程 · 1 项' })).toBeDefined()
     expect(hiddenKinds(container)).toEqual(['tool-call'])
-    // The max-tokens notice sorts after the summary and stays visible.
+    // The max-tokens notice sorts after the final reply and stays visible.
     expect(visibleKinds(container)).toEqual([
       'user', 'auto-fold-summary', 'assistant-step', 'turn-max-tokens', 'turn-tail',
     ])

@@ -41,16 +41,22 @@ export function resolveFoldTarget(
   })
   if (finalCandidates.length !== 1) return null
   const finalKey = finalCandidates[0]!
+  const finalNode = chat.nodes.get(finalKey)!
+  // The folded set is everything strictly before the final reply. The
+  // summary row now anchors at the top of the turn, so it can no longer
+  // serve as the folding boundary; the final reply's own anchor is the
+  // stable line between process nodes and result states.
+  const finalAnchor = finalNode.anchorSeq
   const processKeys: string[] = []
   for (const key of visibleKeys) {
     if (key === summary.key || key === finalKey) continue
     const node = chat.nodes.get(key)
     if (node === undefined) continue
     if (PROTECTED_KINDS.has(node.kind)) continue
-    // Only nodes sorted strictly before the summary belong to the folded
-    // set; anything after it (terminal error/max-token notices, late tool
-    // evidence) is a result state and stays visible.
-    if (node.anchorSeq >= summaryNode.anchorSeq) continue
+    // Only nodes sorted strictly before the final reply belong to the
+    // folded set; anything at or after it (terminal error/max-token
+    // notices, late tool evidence) is a result state and stays visible.
+    if (node.anchorSeq >= finalAnchor) continue
     processKeys.push(key)
   }
   return { turn: data.turn, summaryKey: summary.key, finalKey, processKeys, count: processKeys.length }

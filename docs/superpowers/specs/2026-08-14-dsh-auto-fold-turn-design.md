@@ -18,7 +18,7 @@ DSH 会在一轮对话中依次展示中间 assistant 输出、工具调用、�
 1. 所有新完成轮次和已加载的历史轮次使用相同折叠规则。
 2. 一轮存在 closing assistant 时，默认折叠位于最终回复之前的工具调用、中间 assistant、重试和其他轮内过程节点。
 3. 保留用户消息、closing assistant、插件摘要行、最终回复之后的终态提示和 DSH 原生 turn-tail 操作。
-4. 摘要行位于被折叠过程之后、最终回复之前。
+4. 摘要行位于该轮 agent 回答的顶部（用户 prompt 之后、过程节点之前）。
 5. 用户手动展开某轮后，刷新页面仍保持展开，直到用户再次折叠。
 6. 插件无法可靠识别轮次或 DOM 时保持完整内容可见。
 7. 插件禁用或卸载后，原生聊天内容完整恢复。
@@ -36,7 +36,7 @@ DSH 会在一轮对话中依次展示中间 assistant 输出、工具调用、�
 
 ### 采用：Conversation Node + 精确 DOM 适配层
 
-插件通过 DSH 正式的 Conversation Node 扩展接口创建 `auto-fold-summary` Chat Node，并将其排列在 closing assistant 之前。节点 renderer 负责摘要交互；独立的 DOM 适配层只根据权威 Node key 隐藏或恢复既有原生节点。
+插件通过 DSH 正式的 Conversation Node 扩展接口创建 `auto-fold-summary` Chat Node，并将其排列在该轮 agent 回答的顶部（用户 prompt 之后、首个过程节点之前）。节点 renderer 负责摘要交互；独立的 DOM 适配层只根据权威 Node key 隐藏或恢复既有原生节点。
 
 该方案保留原生 renderer，与现有 Chat 插件共存，并把非正式 DOM 依赖隔离在一个很薄的模块中。
 
@@ -71,7 +71,7 @@ DSH 会在一轮对话中依次展示中间 assistant 输出、工具调用、�
 - 从 engine-owned Turn location 的 `turn-tail` data 读取 closing assistant。
 - 没有 closing assistant 时不发布 Chat Node。
 - 有 closing assistant 时发布 `auto-fold-summary` Node，数据包含 turn、closing seq 和稳定持久身份所需字段。
-- `anchorSeq` 使用插件私有的、明确命名的 before-final offset，使摘要位于 closing assistant 之前。该排序假设由专门兼容测试覆盖，不散落在其他模块。
+- `anchorSeq` 使用插件私有的、明确命名的 before-first-agent-content offset，使摘要位于该轮 agent 回答的顶部（用户 prompt 之后、首个过程节点之前）。真实事件流中 `step/start` 可能先于 `user/message`（agent/inbox/spliced），因此锚点取该轮第一个 agent 内容事件（`assistant/chunk` 等，均带 `turn` 字段且恒排在用户消息之后）的 seq。该排序假设由专门兼容测试覆盖，不散落在其他模块。
 
 历史 replace、历史 prepend 和实时 append 必须产生相同的最终 Node。
 
@@ -84,7 +84,7 @@ DSH 会在一轮对话中依次展示中间 assistant 输出、工具调用、�
 - 找到 `finalNode.seq` 等于 closing seq 的 assistant Node，作为最终回复。
 - 排除 closing assistant、`auto-fold-summary`、`turn-tail`。
 - 防御性排除 `user` 和 `steering`，即使未来 DSH 把它们归入 Turn 也不会被隐藏。
-- 只把 `anchorSeq` 严格早于 summary Node 的其余 Node 纳入过程集合；原生排在最终回复之后的 error、max-token 等终态提示属于结果状态，保持可见。
+- 只把 `anchorSeq` 严格早于最终回复的其余 Node 纳入过程集合（最终回复自身 anchor 是折叠边界）；原生排在最终回复之后的 error、max-token 等终态提示属于结果状态，保持可见。
 - 返回过程数量、目标 key 和最终回复 key；无法唯一解析时返回不可折叠结果。
 
 该模块只扫描当前 Turn，不扫描整个会话或完整事件窗口。
@@ -133,15 +133,15 @@ v1 不自动过期用户的显式展开选择，以兑现“直到再次折叠�
 
 ```text
 用户消息
-  轮内过程节点……
   [过程 · N 项 / 收起过程 · N 项]
+  轮内过程节点……
 最终回复
 原生最终回复操作栏
 ```
 
-折叠时过程节点不可见，摘要行自然成为用户消息和最终回复之间的唯一过渡。展开时过程恢复到摘要行上方，摘要仍位于其控制内容的末尾。
+折叠时过程节点不可见，摘要行位于用户消息之后、首个过程节点之前，是该轮 agent 回答的顶部。展开时过程恢复到摘要行下方，摘要仍位于其控制内容的开头。
 
-摘要 Node 的排序通过 closing assistant 的 seq 减去一个插件私有小数 offset 实现。offset 是兼容边界，不作为公共 API；测试必须证明它位于本轮当前可折叠过程之后且严格早于 closing assistant。任何原生排在 summary 之后的 Node 都不会被折叠，因此终态提示即使位于最终回复之后，也不会破坏“summary 在被折叠内容下方”的语义。若未来 DSH 改变排序约定，兼容测试应失败，而运行时 DOM 适配仍保持 fail-open。
+摘要 Node 的排序通过该轮第一个 agent 内容事件（`assistant/chunk` / `assistant/message` / `tool/call` / `llm/retry`）的 seq 减去一个插件私有小数 offset 实现。offset 是兼容边界，不作为公共 API；测试必须证明它位于用户消息之后、所有过程节点之前。真实事件流中 `step/start` 可能先于 `user/message`（agent/inbox/spliced），因此 step 锚点不可靠——这些 agent 内容事件都带 `turn` 字段且恒排在用户消息之后（用户先提问、agent 才响应）。折叠边界以最终回复自身的 anchor 为准：任何原生排在最终回复之后的 Node 都不会被折叠，因此终态提示即使位于最终回复之后，也不会被误折叠。若未来 DSH 改变排序约定，兼容测试应失败，而运行时 DOM 适配仍保持 fail-open。
 
 ## 交互和视觉
 
@@ -156,8 +156,8 @@ v1 不自动过期用户的显式展开选择，以兑现“直到再次折叠�
 
 ```text
 turn/end
-  → FoldSummaryDefinition 找到 closing assistant
-  → 发布排在最终回复之前的 auto-fold-summary Node
+  → FoldSummaryDefinition 找到 closing assistant 与 turn/start 位置
+  → 发布排在 agent 回答顶部的 auto-fold-summary Node
   → FoldSummaryRow 读取 session snapshot
   → FoldTargetResolver 计算当前 Turn 的精确过程 Node key
   → FoldStateStore 读取默认折叠或显式展开状态
@@ -193,15 +193,15 @@ DOM 兼容依赖集中为：
 - 有 closing assistant 的 `turn/end` 生成 summary Node。
 - 无 closing assistant 时不生成。
 - 没有 `messageId` 的中断 closing assistant 仍可生成。
-- summary anchor 严格位于 closing assistant 之前。
+- summary anchor 严格位于 agent 回答顶部（用户 prompt 之后、首个过程节点之前）。
 - 完整 replace、尾页后 prepend 和实时 append 产生相同 Node。
 
 ### Resolver 单元测试
 
 - 只读取当前 Turn。
 - 保留 closing assistant、summary、turn-tail、user 和 steering。
-- 折叠 summary 之前的工具、中间 assistant 和 retry 等过程节点。
-- 保留 summary 之后的 error、max-token 等终态提示。
+- 折叠最终回复之前的工具、中间 assistant 和 retry 等过程节点。
+- 保留最终回复之后的 error、max-token 等终态提示。
 - 多轮数据不相互污染。
 - 解析歧义时返回不可折叠。
 
@@ -258,7 +258,7 @@ DOM 兼容依赖集中为：
 
 1. 所有已加载、存在最终回复的 Turn 默认折叠，包括历史 Turn。
 2. 折叠后保留用户消息、summary、最终回复、终态提示和原生 turn-tail 操作。
-3. summary 位于过程之后、最终回复之前。
+3. summary 位于用户消息之后、首个过程节点之前（agent 回答顶部）。
 4. 每个 Turn 可独立展开和折叠。
 5. 显式展开状态跨刷新保留，直到用户再次折叠。
 6. 没有最终回复或无法可靠解析的 Turn 保持完整显示。

@@ -7,7 +7,7 @@ const finalKey = 'assistant-final'
 const userKey = 'user-1'
 const tailKey = 'turn-tail-1'
 
-/** One completed turn: user, tool rows, intermediate assistant, final, tail, summary. */
+/** One completed turn: user, tool rows, intermediate assistant, final, summary before it, tail. */
 function completedTurn(): FoldFixtureNode[] {
   return [
     { key: userKey, kind: 'user', anchorSeq: 2, turn: 1 },
@@ -15,14 +15,14 @@ function completedTurn(): FoldFixtureNode[] {
     { key: 'assistant-mid', kind: 'assistant-step', anchorSeq: 5, turn: 1, finalNodeSeq: 5 },
     { key: 'tool-2', kind: 'tool-call', anchorSeq: 6, turn: 1 },
     { key: 'retry-1', kind: 'model-retry', anchorSeq: 7, turn: 1 },
-    { key: finalKey, kind: 'assistant-step', anchorSeq: 8, turn: 1, finalNodeSeq: 8 },
     { key: summaryKey, kind: 'auto-fold-summary', anchorSeq: 7.95, turn: 1, summaryData: { closingSeq: 8 } },
+    { key: finalKey, kind: 'assistant-step', anchorSeq: 8, turn: 1, finalNodeSeq: 8 },
     { key: tailKey, kind: 'turn-tail', anchorSeq: 8.1, turn: 1 },
   ]
 }
 
 describe('resolveFoldTarget', () => {
-  it('folds tools, intermediate assistants and retries strictly before the summary anchor', () => {
+  it('folds tools, intermediate assistants and retries strictly before the closing assistant', () => {
     const target = resolveFoldTarget(foldChatFixture(completedTurn()), {
       key: summaryKey,
       kind: 'auto-fold-summary',
@@ -46,7 +46,7 @@ describe('resolveFoldTarget', () => {
     expect(target?.processKeys).not.toContain(tailKey)
   })
 
-  it('keeps terminal error and max-token notices that sort after the summary visible', () => {
+  it('keeps terminal error and max-token notices that sort after the closing assistant visible', () => {
     const target = resolveFoldTarget(foldChatFixture([
       ...completedTurn().filter(spec => spec.kind !== 'turn-tail'),
       { key: 'max-tokens-1', kind: 'turn-max-tokens', anchorSeq: 8.05, turn: 1 },
@@ -81,11 +81,11 @@ describe('resolveFoldTarget', () => {
     } as never)).toBeNull()
   })
 
-  it('returns an empty process set for a turn with nothing foldable before the summary', () => {
+  it('returns an empty process set for a turn with nothing foldable before the closing assistant', () => {
     const target = resolveFoldTarget(foldChatFixture([
       { key: userKey, kind: 'user', anchorSeq: 2, turn: 1 },
-      { key: finalKey, kind: 'assistant-step', anchorSeq: 8, turn: 1, finalNodeSeq: 8 },
       { key: summaryKey, kind: 'auto-fold-summary', anchorSeq: 7.95, turn: 1, summaryData: { closingSeq: 8 } },
+      { key: finalKey, kind: 'assistant-step', anchorSeq: 8, turn: 1, finalNodeSeq: 8 },
     ]), { key: summaryKey, kind: 'auto-fold-summary', anchorSeq: 7.95 } as never)
     expect(target?.count).toBe(0)
     expect(target?.processKeys).toEqual([])
