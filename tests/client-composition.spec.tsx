@@ -1,15 +1,26 @@
 // @vitest-environment jsdom
-import { Context } from 'cordis'
+import { Context, Service } from 'cordis'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ConversationEventRegistry, SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
 import { apply, inject } from '../src/client/index.tsx'
 import { foldSummaryDefinition } from '../src/client/fold-summary-definition.ts'
 import { FoldSummaryRow } from '../src/client/summary-row.tsx'
 
+/** Stand-in for the UiConversation service (dsh ≥ 0.1.2-rc.1). */
+class FakeUiConversation extends Service {
+  static inject = ['conversationEvents']
+  readonly events: ConversationEventRegistry
+  constructor(ctx: Context) {
+    super(ctx, 'uiConversation')
+    this.events = ctx.conversationEvents
+  }
+}
+
 async function bench() {
   const ctx = new Context()
   await ctx.plugin(SlotRegistry).await()
   new ConversationEventRegistry(ctx)
+  await ctx.plugin(FakeUiConversation).await()
   // Stand-in for ui-conversation's declaration of the keyed chat node seat
   // (the real declaration comes from its apply; the plugin only injects into it).
   ctx.slots.register(
@@ -30,8 +41,8 @@ describe('client plugin composition', () => {
     document.head.innerHTML = ''
   })
 
-  it('declares the slots and conversationEvents dependencies', () => {
-    expect(inject).toEqual(['slots', 'conversationEvents'])
+  it('declares the slots and uiConversation dependencies', () => {
+    expect(inject).toEqual(['slots', 'uiConversation'])
   })
 
   it('registers the Definition, the keyed renderer and the stylesheet, then disposes cleanly', async () => {

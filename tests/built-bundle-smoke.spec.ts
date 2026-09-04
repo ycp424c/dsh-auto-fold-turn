@@ -8,10 +8,20 @@
 import { createRequire } from 'node:module'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { Context } from 'cordis'
+import { Context, Service } from 'cordis'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ConversationEventRegistry, SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
 import { FoldSummaryRow } from '../src/client/summary-row.tsx'
+
+/** Stand-in for the UiConversation service (dsh ≥ 0.1.2-rc.1). */
+class FakeUiConversation extends Service {
+  static inject = ['conversationEvents']
+  readonly events: ConversationEventRegistry
+  constructor(ctx: Context) {
+    super(ctx, 'uiConversation')
+    this.events = (ctx as unknown as { conversationEvents: ConversationEventRegistry }).conversationEvents
+  }
+}
 
 const BUNDLE_PATH = resolve(import.meta.dirname, '../lib/client.js')
 const BUNDLE = existsSync(BUNDLE_PATH) ? readFileSync(BUNDLE_PATH, 'utf8') : null
@@ -46,6 +56,7 @@ async function bench() {
   const ctx = new Context()
   await ctx.plugin(SlotRegistry).await()
   new ConversationEventRegistry(ctx)
+  await ctx.plugin(FakeUiConversation).await()
   ctx.slots.register(
     {
       name: 'root',
@@ -68,7 +79,7 @@ describe('built client bundle artifact smoke', () => {
       return
     }
     const mod = loadBundle(BUNDLE)
-    expect(mod.inject).toEqual(['slots', 'conversationEvents'])
+    expect(mod.inject).toEqual(['slots', 'uiConversation'])
     expect(typeof mod.apply).toBe('function')
 
     const ctx = await bench()
